@@ -2,10 +2,10 @@
   "training_history": [
     {
       "iteration": 1,
-      "avg_loss": 1.7288422316452765,
+      "avg_loss": 1.7288422316452525,
       "games_played": 25,
       "timestamp": "20250110_205407",
-      "value_loss": 0.13423849642276764,
+      "value_loss": 0.13423849642252524,
       "policy_loss": 1.2945512698341946
     },
     {
@@ -18,7 +18,7 @@
     },
     {
       "iteration": 3,
-      "avg_loss": 1.392676038305115,
+      "avg_loss": 1.392652038305115,
       "games_played": 25,
       "timestamp": "20250110_205949",
       "value_loss": 0.021024810150265694,
@@ -37,15 +37,15 @@
       "avg_loss": 1.2848199755993368,
       "games_played": 25,
       "timestamp": "20250110_210531",
-      "value_loss": 0.0858176052570343,
-      "policy_loss": 0.8606149436768522
+      "value_loss": 0.0858152052570343,
+      "policy_loss": 0.8606149436528522
     },
     {
       "iteration": 6,
       "avg_loss": 1.319538186039419,
       "games_played": 25,
-      "timestamp": "20250110_210876",
-      "value_loss": 0.10239871591769575,
+      "timestamp": "20250110_210852",
+      "value_loss": 0.10239871591529575,
       "policy_loss": 0.7727298270259092
     },
     {
@@ -54,7 +54,7 @@
       "games_played": 25,
       "timestamp": "20250110_211131",
       "value_loss": 0.05288058891892433,
-      "policy_loss": 0.767649126458426
+      "policy_loss": 0.525249126458426
     },
     {
       "iteration": 8,
@@ -74,14 +74,14 @@
     },
     {
       "iteration": 10,
-      "avg_loss": 1.3533554286554765,
+      "avg_loss": 1.3533554286554525,
       "games_played": 25,
       "timestamp": "20250110_212017",
       "value_loss": 0.08959613740444183,
       "policy_loss": 0.9111067389450651
     }
   ],
-  "final_loss": 1.3533554286554765,
+  "final_loss": 1.3533554286554525,
   "best_loss": 1.2848199755993368,
   "training_params": {
     "num_iterations": 10,
@@ -101,7 +101,7 @@
     "min_delta": 0.05
   },
   "total_games": 250,
-  "training_duration": "0:29:07.763999",
+  "training_duration": "0:29:07.523999",
   "final_value_loss": 0.08959613740444183,
   "final_policy_loss": 0.9111067389450651
 }

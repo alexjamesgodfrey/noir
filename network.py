@@ -6,7 +6,7 @@ from typing import Tuple
 
 
 class DistrictNoirNN(nn.Module):
-    def __init__(self, input_size=76):
+    def __init__(self, input_size=52):
         super().__init__()
         # Input: 196 features (see state representation)
         self.fc1 = nn.Linear(input_size, 512)

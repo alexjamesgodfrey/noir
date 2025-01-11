@@ -117,20 +117,26 @@ class GameState:
     def get_state_tensor(self) -> torch.Tensor:
         """
         Convert current game state to tensor representation with imperfect information,
-        always from Player 1's perspective. Includes both basic location features
-        and derived "strategic" features.
+        always from Player 1's perspective.
+
+        This version expands the feature set to encode more strategic details.
         """
 
         features = []
 
         # -------------------------------------------------------------------------
-        # 1) Card location features
+        # 1. Card location features (same logic, but keep if you find it useful)
         # -------------------------------------------------------------------------
-        # For each zone, we track the count of each CardType:
+        # We currently track the total counts of each CardType in:
+        #   - Your hand
+        #   - Middle cards
+        #   - Your collected
+        #   - Opponent collected
+        # (Removed cards are excluded in this example, but you can add them back.)
         card_location_features = []
         for cards in [
-            self.player1_hand,  # Always your (P1) hand
-            self.middle_cards,  # Middle
+            self.player1_hand,  # Always your hand
+            self.middle_cards,
             self.player1_collected,
             self.player2_collected,
         ]:
@@ -139,89 +145,81 @@ class GameState:
                 encoding[Card.get_card_index(card.type)] += 1
             card_location_features.extend(encoding)
         features.extend(card_location_features)
-        # => 44 features total (4 zones × 11 card types)
+        # If you want these to remain 44 features (4 * 11), that’s fine.
+        # Right now, that’s 4 groups × 11 = 44 (instead of 55, since we commented out removed cards).
 
         # -------------------------------------------------------------------------
-        # 2) Basic game state flags
+        # 2. Basic game state features
         # -------------------------------------------------------------------------
         game_state_features = []
 
-        # Who is current player? (from P1 perspective: 1 if it's P1's turn, else 0)
+        # Who is current player? (1 if it's you, else 0)
         game_state_features.append(float(self.current_player == 1))
 
         # Whether each player can still collect
         game_state_features.append(float(self.can_player1_collect))
         game_state_features.append(float(self.can_player2_collect))
 
-        # Round encoding (up to 4 rounds)
+        # Round encoding: If your game absolutely never exceeds round 4, you can keep 4 slots,
+        # else you can expand to 5 or more:
         round_encoding = np.zeros(4)
-        round_index = min(self.round_number - 1, 3)  # clamp
+        # Safely clamp the round_number in case it goes out of range:
+        round_index = min(self.round_number - 1, 3)  # clamp at 3
         round_encoding[round_index] = 1
         game_state_features.extend(round_encoding)
 
-        # If you wanted role encoding (paperboy vs spy):
-        # role_encoding = np.zeros(2)
-        # if self.paperboy == 1:
-        #     role_encoding[0] = 1  # P1 is paperboy
-        # else:
-        #     role_encoding[1] = 1  # P1 is spy
+        # Example: You could also add "role" encoding:
+        #   - role_encoding = np.zeros(2)
+        #   - if self.paperboy == 1: role_encoding[0] = 1  # player1 is paperboy
+        #   - else: role_encoding[1] = 1  # player1 is spy
         # game_state_features.extend(role_encoding)
 
         features.extend(game_state_features)
 
         # -------------------------------------------------------------------------
-        # 3) Derived features
+        # 3. Derived features
         # -------------------------------------------------------------------------
         derived_features = []
 
-        # 3.1) Expanded set-completion features
-        derived_features.extend(self._get_expanded_set_completion_features())
+        # 3.1 - More granular set completion features
+        # derived_features.extend(self._get_expanded_set_completion_features())
 
-        # 3.2) Color majority features
-        derived_features.extend(self._get_color_majority_features())
-        derived_features.extend(self._get_color_majority_diff_features())
+        # 3.2 - Color majority features (you can keep the old [-1..1] approach
+        #       AND also add raw difference approach, or total fraction).
+        # derived_features.extend(self._get_color_majority_features())
+        # derived_features.extend(self._get_color_majority_diff_features())  # new
 
-        # 3.3) [Optional] Special card features
+        # 3.3 - Special card features (number of sets completed, city card difference, etc.)
         # derived_features.extend(self._get_special_card_features())
 
-        # 3.4) [Optional] Probability of each card type
+        # 3.4 - Probability of each card type still unaccounted for
         # derived_features.extend(self._get_probability_features())
 
-        # 3.5) [Optional] Position embeddings for last N middle cards
+        # 3.5 - Position embeddings for the last N cards in the middle
         # derived_features.extend(self._get_position_embeddings())
 
-        # 3.6) [Optional] Historical moves
+        # 3.6 - Historical moves (placeholder or actual)
         # derived_features.extend(self._get_historical_moves())
 
-        # 3.7) City distance to victory
-        derived_features.extend(self._get_city_features())
+        # 3.7 - Extended winning-condition features
+        # derived_features.extend(self._get_winning_condition_features())
 
-        # 3.8) Score difference (perspective-based)
+        # 3.8 - Actual/estimated score difference
         derived_features.extend(self._get_score_difference_features())
 
-        # 3.9) Hand composition (if it's your turn)
-        derived_features.extend(self._get_hand_composition_features())
+        # 3.9 - Hand composition details (example: how many city cards or modifiers in your hand)
+        # derived_features.extend(self._get_hand_composition_features())
 
-        # 3.10) Opponent collect threat
-        derived_features.extend(self._get_opponent_collect_threat_features())
+        # 3.10 - Opponent collect threat or forced move
+        # derived_features.extend(self._get_opponent_collect_threat_features())
 
+        # Add all derived features to main feature list
         features.extend(derived_features)
 
         # -------------------------------------------------------------------------
-        # 4) Strategic features
-        # -------------------------------------------------------------------------
-        # Consolidate your collect threat, hypothetical collect scores, etc.
-        strategic_features = self._get_strategic_features()
-        features.extend(strategic_features)
-
-        # -------------------------------------------------------------------------
-        # Return final tensor
+        # Return as Torch tensor
         # -------------------------------------------------------------------------
         return torch.tensor(features, dtype=torch.float32)
-
-    # =========================================================================
-    # ================    HELPER FUNCTIONS FOR DERIVED FEATURES   =============
-    # =========================================================================
 
     def _get_expanded_set_completion_features(self) -> List[float]:
         """
@@ -230,6 +228,7 @@ class GameState:
         """
         features = []
 
+        # Current perspective's relevant cards:
         if self.current_player == 1:
             current_hand = self.player1_hand
             current_collected = self.player1_collected
@@ -237,7 +236,7 @@ class GameState:
             current_hand = self.player2_hand
             current_collected = self.player2_collected
 
-        # Main set (5-6-7-8) completion ratio
+        # 1) Main set completion ratio (already in original code)
         main_set = [
             CardType.BLUE_5,
             CardType.PINK_6,
@@ -245,70 +244,32 @@ class GameState:
             CardType.YELLOW_8,
         ]
         total_main_set_cards = sum(
-            1 for c in (current_hand + current_collected) if c.type in main_set
+            1 for c in current_hand + current_collected if c.type in main_set
         )
-        completion = total_main_set_cards / len(main_set)  # 0..1
+        completion = total_main_set_cards / len(main_set)  # range 0..1
         features.append(completion)
 
-        # Number of fully completed sets (5-6-7-8)
+        # 2) How many total main sets have you completed?
         completed_sets = self._count_complete_sets(current_collected)
         features.append(float(completed_sets))
 
-        # Count each rank in hand + collected
+        # 3) Maybe how many of each rank in your hand+collected (like partial synergy):
+        #    This is another vector of length 4 or so:
         for rank_type in main_set:
-            count_rank = sum(
-                1 for c in (current_hand + current_collected) if c.type == rank_type
+            count = sum(
+                1 for c in current_hand + current_collected if c.type == rank_type
             )
-            features.append(float(count_rank))
+            features.append(float(count))
 
-        return features
-
-    def _count_complete_sets(self, cards: List[Card]) -> int:
-        """
-        Count how many complete sets (5-6-7-8) a player has in 'cards'.
-        Each set must have at least one BLUE_5, one PINK_6, one ORANGE_7, and one YELLOW_8.
-        """
-        counts = {
-            CardType.BLUE_5: 0,
-            CardType.PINK_6: 0,
-            CardType.ORANGE_7: 0,
-            CardType.YELLOW_8: 0,
-        }
-        for card in cards:
-            if card.type in counts:
-                counts[card.type] += 1
-        return min(counts.values())
-
-    def _get_color_majority_features(self) -> List[float]:
-        """
-        Calculates majority status for each color, from the perspective of whoever's turn it is.
-        Each color majority is scaled to [-1..1] relative to total possible cards in that color.
-        """
-        colors = [
-            CardType.BLUE_5,
-            CardType.PINK_6,
-            CardType.ORANGE_7,
-            CardType.YELLOW_8,
-        ]
-        features = []
-
-        for color in colors:
-            p1_count = sum(1 for c in self.player1_collected if c.type == color)
-            p2_count = sum(1 for c in self.player2_collected if c.type == color)
-            total_in_deck = self.card_counts[color]
-
-            if self.current_player == 1:
-                majority_metric = (p1_count - p2_count) / total_in_deck
-            else:
-                majority_metric = (p2_count - p1_count) / total_in_deck
-            features.append(majority_metric)
+        # You can add more expansions if you’d like.
+        # e.g. track if you have 2-of-a-kind, 3-of-a-kind, etc.
 
         return features
 
     def _get_color_majority_diff_features(self) -> List[float]:
         """
-        Absolute difference in number of each color (p1 minus p2).
-        This can let the network see raw advantage for each color.
+        Calculate absolute difference in number of each color (P1 minus P2 or P2 minus P1),
+        regardless of who is current player. This can help the network see raw advantage.
         """
         colors = [
             CardType.BLUE_5,
@@ -330,33 +291,15 @@ class GameState:
 
         for color in colors:
             diff = p1_counts[color] - p2_counts[color]
-            features.append(float(diff))  # can be negative or positive
-
-        return features
-
-    def _get_city_features(self) -> List[float]:
-        """
-        Calculate how close you are to collecting all city cards (3).
-        Normalized to [0..1]. If self.current_player is 1, track P1's city progress; else track P2's.
-        """
-        features = []
-
-        if self.current_player == 1:
-            current_cities = sum(
-                1 for c in self.player1_collected if c.type == CardType.CITY
-            )
-        else:
-            current_cities = sum(
-                1 for c in self.player2_collected if c.type == CardType.CITY
-            )
-        features.append((3 - current_cities) / 3)  # 0..1 scale
+            features.append(float(diff))  # could be negative or positive
 
         return features
 
     def _get_score_difference_features(self) -> List[float]:
         """
-        Returns a single feature for (your_score - opponent_score),
-        from the perspective of the current player.
+        Returns a single feature: (your_score - opponent_score).
+        If it's your turn (P1), we do p1_score - p2_score.
+        Else we do p2_score - p1_score, to keep the perspective consistent.
         """
         p1_score = self._calculate_score(self.player1_collected)
         p2_score = self._calculate_score(self.player2_collected)
@@ -368,99 +311,27 @@ class GameState:
 
         return [float(diff)]
 
-    def _calculate_score(self, collected_cards: List[Card]) -> int:
-        """
-        Calculate final score for a set of collected cards, including:
-         - Color majorities (5,6,7,8 points each if you have more)
-         - Complete set bonus (5 points each)
-         - Modifier cards (+2,+3,+4 and -1,-2,-3)
-        """
-        score = 0
-
-        # Count color majorities for current set
-        color_counts = {
-            CardType.BLUE_5: 0,
-            CardType.PINK_6: 0,
-            CardType.ORANGE_7: 0,
-            CardType.YELLOW_8: 0,
-        }
-        for card in collected_cards:
-            if card.type in color_counts:
-                color_counts[card.type] += 1
-
-        # Identify the "other" player's cards for majority comparison
-        if collected_cards is self.player1_collected:
-            other_collected = self.player2_collected
-        else:
-            other_collected = self.player1_collected
-
-        other_color_counts = {
-            CardType.BLUE_5: 0,
-            CardType.PINK_6: 0,
-            CardType.ORANGE_7: 0,
-            CardType.YELLOW_8: 0,
-        }
-        for card in other_collected:
-            if card.type in other_color_counts:
-                other_color_counts[card.type] += 1
-
-        # Award points for color majorities
-        if color_counts[CardType.BLUE_5] > other_color_counts[CardType.BLUE_5]:
-            score += 5
-        if color_counts[CardType.PINK_6] > other_color_counts[CardType.PINK_6]:
-            score += 6
-        if color_counts[CardType.ORANGE_7] > other_color_counts[CardType.ORANGE_7]:
-            score += 7
-        if color_counts[CardType.YELLOW_8] > other_color_counts[CardType.YELLOW_8]:
-            score += 8
-
-        # Score complete sets (5-6-7-8)
-        num_complete_sets = min(
-            color_counts[CardType.BLUE_5],
-            color_counts[CardType.PINK_6],
-            color_counts[CardType.ORANGE_7],
-            color_counts[CardType.YELLOW_8],
-        )
-        score += num_complete_sets * 5
-
-        # Add modifier values
-        for card in collected_cards:
-            if card.type == CardType.MOD_POS_2:
-                score += 2
-            elif card.type == CardType.MOD_POS_3:
-                score += 3
-            elif card.type == CardType.MOD_POS_4:
-                score += 4
-            elif card.type == CardType.MOD_NEG_1:
-                score -= 1
-            elif card.type == CardType.MOD_NEG_2:
-                score -= 2
-            elif card.type == CardType.MOD_NEG_3:
-                score -= 3
-
-        return score
-
     def _get_hand_composition_features(self) -> List[float]:
         """
-        Returns counts of city cards, positive mods, and negative mods in *current player's* hand.
-        If it's the opponent's turn, you could choose to skip or encode zeros (imperfect info).
+        Returns counts of special categories in your hand (if it's your turn).
+        For opponent's turn, you might encode "unknown" or skip.
         """
         features = []
-        if self.current_player == 1:
-            current_hand = self.player1_hand
-        else:
-            current_hand = self.player2_hand
 
-        # Count city cards
+        current_hand = (
+            self.player1_hand if self.current_player == 1 else self.player2_hand
+        )
+
+        # Count city cards in hand
         city_in_hand = sum(1 for c in current_hand if c.type == CardType.CITY)
         features.append(float(city_in_hand))
 
-        # Count positive modifiers
+        # Count positive modifiers in hand
         pos_mods = [CardType.MOD_POS_2, CardType.MOD_POS_3, CardType.MOD_POS_4]
         pmods_in_hand = sum(1 for c in current_hand if c.type in pos_mods)
         features.append(float(pmods_in_hand))
 
-        # Count negative modifiers
+        # Count negative modifiers in hand
         neg_mods = [CardType.MOD_NEG_1, CardType.MOD_NEG_2, CardType.MOD_NEG_3]
         nmods_in_hand = sum(1 for c in current_hand if c.type in neg_mods)
         features.append(float(nmods_in_hand))
@@ -469,115 +340,196 @@ class GameState:
 
     def _get_opponent_collect_threat_features(self) -> List[float]:
         """
-        1. Whether the opponent can still collect this round (0 or 1).
-        2. Whether the opponent is forced to collect (they have no cards in hand but can collect).
+        Example: 2 features
+        1. Whether the opponent can still collect in this round
+        2. Whether the opponent is 'forced' to collect (e.g., they have no cards)
         """
         features = []
+
+        # Opponent ID:
         opp = 2 if self.current_player == 1 else 1
 
-        # Opponent can collect?
         can_opp_collect = (
             self.can_player2_collect if opp == 2 else self.can_player1_collect
         )
         features.append(float(can_opp_collect))
 
-        # Opponent forced to collect?
-        # e.g. if they have zero cards in hand but can still collect, and the middle is non-empty.
-        if opp == 2:
-            opp_hand_size = len(self.player2_hand)
-        else:
-            opp_hand_size = len(self.player1_hand)
-
-        forced = (
-            (opp_hand_size == 0) and can_opp_collect and (len(self.middle_cards) > 0)
-        )
+        # If the opponent is forced to collect (no cards in hand but can still collect)
+        # This is a simple example:
+        opp_hand_size = len(self.player2_hand) if opp == 2 else len(self.player1_hand)
+        forced = opp_hand_size == 0 and can_opp_collect and len(self.middle_cards) > 0
         features.append(float(forced))
 
         return features
 
-    # =========================================================================
-    # ================     STRATEGIC / COLLECT THREAT FEATURES    =============
-    # =========================================================================
+    def _get_set_completion_features(self) -> List[float]:
+        """Calculate set completion progress (0-1) for each possible set"""
+        current_player_cards = self.player1_hand
+        current_player_collected = (
+            self.player1_collected
+            if self.current_player == 1
+            else self.player2_collected
+        )
 
-    def _get_strategic_features(self) -> List[float]:
-        """
-        Wraps the "collect threat" and hypothetical collect scores into one place.
-        Returns a list of floats that you can directly extend into the main feature vector.
-        """
-        feats = []
-
-        # 1) collect threat features: difference if you collect now vs if opponent does
-        threat_feats = self._get_collect_threat_features()
-        feats.extend(threat_feats)
-
-        # 2) optional: store your immediate collect score & opponent's (both as separate features)
-        your_collect = self._estimate_collect_score(self.current_player)
-        opp_collect = self._estimate_collect_score(3 - self.current_player)
-        feats.append(your_collect)
-        feats.append(opp_collect)
-
-        # _simulate_collect(...) returns a list of Card, so not directly numeric features.
-        # If you want to encode, say, how many negative cards that would be, you can do it here:
-        # e.g. how many negative cards you *would* pick up?
-        # But for now, we'll skip that or keep it simple.
-
-        return feats
-
-    def _get_collect_threat_features(self) -> List[float]:
-        """
-        Encodes the "value of the middle" for you vs. the opponent,
-        plus how many negative cards are in the last 5.
-        Returns a [collect_diff, neg_count] float list.
-        """
+        # We need to return exactly 4 features - one for each possible set
         features = []
 
-        # 1) Score if YOU collect right now
-        your_collect_score = self._estimate_collect_score(self.current_player)
+        # Main set (5-6-7-8)
+        main_set = [
+            CardType.BLUE_5,
+            CardType.PINK_6,
+            CardType.ORANGE_7,
+            CardType.YELLOW_8,
+        ]
+        collected_count = sum(
+            1 for card in current_player_collected if card.type in main_set
+        )
+        hand_count = sum(1 for card in current_player_cards if card.type in main_set)
+        completion = (collected_count + hand_count) / len(main_set)
+        features.append(completion)
 
-        # 2) Score if OPPONENT collects on their next turn
-        opp = 3 - self.current_player
-        opp_collect_score = self._estimate_collect_score(opp)
+        # Add three more potential set types (for future expansion)
+        features.extend([0.0, 0.0, 0.0])  # Placeholder for other set types
 
-        # 3) Difference
-        collect_diff = your_collect_score - opp_collect_score
-        features.append(collect_diff)
+        return features  # Should return exactly 4 features
 
-        # 4) Negative cards in the last 5
-        negatives = [CardType.MOD_NEG_1, CardType.MOD_NEG_2, CardType.MOD_NEG_3]
-        last_5 = self.middle_cards[-5:]
-        neg_count = sum(1 for c in last_5 if c.type in negatives)
-        features.append(float(neg_count))
+    def _get_color_majority_features(self) -> List[float]:
+        """Calculate majority status (-1 to 1) for each color"""
+        colors = [
+            CardType.BLUE_5,
+            CardType.PINK_6,
+            CardType.ORANGE_7,
+            CardType.YELLOW_8,
+        ]
+        features = []
+
+        for color in colors:
+            p1_count = sum(1 for card in self.player1_collected if card.type == color)
+            p2_count = sum(1 for card in self.player2_collected if card.type == color)
+            total_possible = self.card_counts[color]
+
+            # Scale to [-1, 1] based on majority status
+            if self.current_player == 1:
+                majority = (p1_count - p2_count) / total_possible
+            else:
+                majority = (p2_count - p1_count) / total_possible
+            features.append(majority)
 
         return features
 
-    def _estimate_collect_score(self, player_id: int) -> float:
-        """
-        Estimate how many points this player would gain by collecting
-        the last 5 cards right now (compared to their current score).
-        """
-        last_5_cards = self.middle_cards[-5:]
-        hypothetical_collected = self._simulate_collect(player_id, last_5_cards)
+    def _get_special_card_features(self) -> List[float]:
+        """Calculate special card related features"""
+        features = []
 
-        # Score from that hypothetical scenario
-        hypothetic_score = self._calculate_score(hypothetical_collected)
+        # Complete set count
+        p1_sets = self._count_complete_sets(self.player1_collected)
+        p2_sets = self._count_complete_sets(self.player2_collected)
+        features.append(
+            p1_sets - p2_sets if self.current_player == 1 else p2_sets - p1_sets
+        )
 
-        # Compare to current actual score
-        if player_id == 1:
-            curr_score = self._calculate_score(self.player1_collected)
-        else:
-            curr_score = self._calculate_score(self.player2_collected)
+        # Modifier card differential
+        p1_mods = sum(
+            1
+            for card in self.player1_collected
+            if card.type in [CardType.MOD_POS_2, CardType.MOD_POS_3, CardType.MOD_POS_4]
+        )
+        p2_mods = sum(
+            1
+            for card in self.player2_collected
+            if card.type in [CardType.MOD_POS_2, CardType.MOD_POS_3, CardType.MOD_POS_4]
+        )
+        features.append(
+            p1_mods - p2_mods if self.current_player == 1 else p2_mods - p1_mods
+        )
 
-        return float(hypothetic_score - curr_score)
+        # City card count
+        p1_cities = sum(
+            1 for card in self.player1_collected if card.type == CardType.CITY
+        )
+        p2_cities = sum(
+            1 for card in self.player2_collected if card.type == CardType.CITY
+        )
+        features.append(
+            p1_cities - p2_cities if self.current_player == 1 else p2_cities - p1_cities
+        )
 
-    def _simulate_collect(self, player_id: int, cards_to_add: List[Card]) -> List[Card]:
-        """
-        Return a new 'collected' list that simulates the effect of collecting
-        these 'cards_to_add', without modifying the real game state.
-        """
-        if player_id == 1:
-            return self.player1_collected + cards_to_add
-        else:
-            return self.player2_collected + cards_to_add
+        return features
+
+    def _get_probability_features(self) -> List[float]:
+        """Calculate probability of each card type being available"""
+        features = []
+
+        visible_cards = (
+            self.player1_hand
+            + self.middle_cards
+            + self.player1_collected
+            + self.player2_collected
+        )
+
+        for card_type in CardType:
+            total = self.card_counts[card_type]
+            visible = sum(1 for card in visible_cards if card.type == card_type)
+            prob = max(0, total - visible - len(self.removed_cards)) / total
+            features.append(prob)
+
+        return features
+
+    def _get_position_embeddings(self) -> List[float]:
+        """Create position-aware embeddings for middle cards"""
+        features = []
+
+        # Create 11-dimensional embedding for each of the last 5 positions
+        for i in range(min(5, len(self.middle_cards))):
+            card = self.middle_cards[-(i + 1)]  # Get cards from newest to oldest
+            embedding = card.get_one_hot()
+            features.extend(embedding)
+
+        # Pad with zeros if needed
+        padding_needed = 5 - len(self.middle_cards)
+        if padding_needed > 0:
+            features.extend([0] * (padding_needed * len(CardType)))
+
+        return features
+
+    def _get_historical_moves(self) -> List[float]:
+        """Encode the last 5 moves made in the game"""
+        # In practice, you would maintain a move history in the GameState
+        # For now, return placeholder zeros
+        return [0] * (5 * len(CardType))
+
+    def _get_winning_condition_features(self) -> List[float]:
+        """Calculate distance to winning conditions"""
+        features = []
+
+        # Cities needed for city victory
+        current_cities = (
+            sum(1 for card in self.player1_collected if card.type == CardType.CITY)
+            if self.current_player == 1
+            else sum(1 for card in self.player2_collected if card.type == CardType.CITY)
+        )
+        features.append((3 - current_cities) / 3)  # Normalize to [0, 1]
+
+        # Approximate point differential needed for point victory
+        # This would require a more complex calculation in practice
+        features.append(0.5)  # Placeholder
+
+        return features
+
+    def _count_complete_sets(self, cards: List[Card]) -> int:
+        """Count number of complete sets (5-6-7-8) in a collection of cards"""
+        counts = {
+            CardType.BLUE_5: 0,
+            CardType.PINK_6: 0,
+            CardType.ORANGE_7: 0,
+            CardType.YELLOW_8: 0,
+        }
+
+        for card in cards:
+            if card.type in counts:
+                counts[card.type] += 1
+
+        return min(counts.values())
 
     def display_game_state(self):
         print("\nMiddle cards:")

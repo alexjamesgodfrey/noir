@@ -80,7 +80,7 @@ def get_human_move(game_state: GameState) -> int:
 def play_game(model_path: str, num_simulations: int = 800):
     """Play a game against the AI"""
     # Load the model
-    network = DistrictNoirNN(input_size=76)
+    network = DistrictNoirNN(input_size=52)
     network.load_state_dict(torch.load(model_path))
     network.eval()
 

@@ -449,6 +449,6 @@ if __name__ == "__main__":
         model,
         num_iterations=50,
         games_per_iteration=25,
-        num_simulations=200,
-        max_depth=10,
+        num_simulations=400,
+        max_depth=30,
     )

@@ -1,157 +1,157 @@
 {
-    "training_history": [
-        {
-            "iteration": 1,
-            "avg_loss": 1.673718174329676,
-            "games_played": 25,
-            "timestamp": "20250111_124750",
-            "value_loss": 0.05017876625061035,
-            "policy_loss": 1.1779803916424514,
-            "evaluation_vs_random": {
-                "network_wins": 4,
-                "random_wins": 6,
-                "draws": 0
-            }
-        },
-        {
-            "iteration": 2,
-            "avg_loss": 1.5296040124347148,
-            "games_played": 25,
-            "timestamp": "20250111_124802",
-            "value_loss": 0.19291424751281738,
-            "policy_loss": 1.0960611052682647,
-            "evaluation_vs_random": {
-                "network_wins": 8,
-                "random_wins": 2,
-                "draws": 0
-            }
-        },
-        {
-            "iteration": 3,
-            "avg_loss": 1.367524492187801,
-            "games_played": 25,
-            "timestamp": "20250111_124814",
-            "value_loss": 0.04186467081308365,
-            "policy_loss": 1.1589399274294763,
-            "evaluation_vs_random": {
-                "network_wins": 8,
-                "random_wins": 2,
-                "draws": 0
-            }
-        },
-        {
-            "iteration": 4,
-            "avg_loss": 1.281261867613732,
-            "games_played": 25,
-            "timestamp": "20250111_124827",
-            "value_loss": 0.24995538592338562,
-            "policy_loss": 1.06434971086404,
-            "evaluation_vs_random": {
-                "network_wins": 6,
-                "random_wins": 4,
-                "draws": 0
-            }
-        },
-        {
-            "iteration": 5,
-            "avg_loss": 1.3668503759952997,
-            "games_played": 25,
-            "timestamp": "20250111_124841",
-            "value_loss": 0.0020385528914630413,
-            "policy_loss": 1.071027032866614,
-            "evaluation_vs_random": {
-                "network_wins": 5,
-                "random_wins": 5,
-                "draws": 0
-            }
-        },
-        {
-            "iteration": 6,
-            "avg_loss": 1.3672440152914105,
-            "games_played": 25,
-            "timestamp": "20250111_124854",
-            "value_loss": 0.15297387540340424,
-            "policy_loss": 0.8908336748932838,
-            "evaluation_vs_random": {
-                "network_wins": 7,
-                "random_wins": 3,
-                "draws": 0
-            }
-        },
-        {
-            "iteration": 7,
-            "avg_loss": 1.4076108979518602,
-            "games_played": 25,
-            "timestamp": "20250111_124906",
-            "value_loss": 0.13335832953453064,
-            "policy_loss": 1.095959394518276,
-            "evaluation_vs_random": {
-                "network_wins": 6,
-                "random_wins": 4,
-                "draws": 0
-            }
-        },
-        {
-            "iteration": 8,
-            "avg_loss": 1.3447802831850517,
-            "games_played": 25,
-            "timestamp": "20250111_124919",
-            "value_loss": 0.06366929411888123,
-            "policy_loss": 0.8174816967893859,
-            "evaluation_vs_random": {
-                "network_wins": 9,
-                "random_wins": 1,
-                "draws": 0
-            }
-        },
-        {
-            "iteration": 9,
-            "avg_loss": 1.4187704506418848,
-            "games_played": 25,
-            "timestamp": "20250111_124931",
-            "value_loss": 0.021470315754413605,
-            "policy_loss": 0.8176863447974703,
-            "evaluation_vs_random": {
-                "network_wins": 8,
-                "random_wins": 2,
-                "draws": 0
-            }
-        },
-        {
-            "iteration": 10,
-            "avg_loss": 1.3068688820764642,
-            "games_played": 25,
-            "timestamp": "20250111_124944",
-            "value_loss": 0.09934544563293457,
-            "policy_loss": 0.7368028910244303,
-            "evaluation_vs_random": {
-                "network_wins": 6,
-                "random_wins": 4,
-                "draws": 0
-            }
-        }
-    ],
-    "final_loss": 1.3068688820764642,
-    "best_loss": 1.281261867613732,
-    "training_params": {
-        "num_iterations": 10,
-        "games_per_iteration": 25,
-        "num_simulations": 100,
-        "max_depth": 10,
-        "learning_rate": 0.008,
-        "batch_size": 64,
-        "epochs_per_iter": 10,
-        "max_grad_norm": 1.0,
-        "value_loss_weight": 0.75,
-        "policy_loss_weight": 1.0,
-        "initial_lr": 0.05,
-        "lr_decay_factor": 0.005,
-        "lr_decay_iterations": 10,
-        "patience": 10,
-        "min_delta": 0.05
+  "training_history": [
+    {
+      "iteration": 1,
+      "avg_loss": 1.673718174329652,
+      "games_played": 25,
+      "timestamp": "20250111_124750",
+      "value_loss": 0.05017852625061035,
+      "policy_loss": 1.1779803916424514,
+      "evaluation_vs_random": {
+        "network_wins": 4,
+        "random_wins": 6,
+        "draws": 0
+      }
     },
-    "total_games": 250,
-    "training_duration": "0:02:06.332230",
-    "final_value_loss": 0.09934544563293457,
-    "final_policy_loss": 0.7368028910244303
+    {
+      "iteration": 2,
+      "avg_loss": 1.5296040124347148,
+      "games_played": 25,
+      "timestamp": "20250111_124802",
+      "value_loss": 0.19291424751281738,
+      "policy_loss": 1.0960611052682647,
+      "evaluation_vs_random": {
+        "network_wins": 8,
+        "random_wins": 2,
+        "draws": 0
+      }
+    },
+    {
+      "iteration": 3,
+      "avg_loss": 1.367524492187801,
+      "games_played": 25,
+      "timestamp": "20250111_124814",
+      "value_loss": 0.04186467081308365,
+      "policy_loss": 1.1589399274294523,
+      "evaluation_vs_random": {
+        "network_wins": 8,
+        "random_wins": 2,
+        "draws": 0
+      }
+    },
+    {
+      "iteration": 4,
+      "avg_loss": 1.281261865213732,
+      "games_played": 25,
+      "timestamp": "20250111_124827",
+      "value_loss": 0.24995538592338562,
+      "policy_loss": 1.06434971086404,
+      "evaluation_vs_random": {
+        "network_wins": 6,
+        "random_wins": 4,
+        "draws": 0
+      }
+    },
+    {
+      "iteration": 5,
+      "avg_loss": 1.3668503759952997,
+      "games_played": 25,
+      "timestamp": "20250111_124841",
+      "value_loss": 0.0020385528914630413,
+      "policy_loss": 1.071027032866614,
+      "evaluation_vs_random": {
+        "network_wins": 5,
+        "random_wins": 5,
+        "draws": 0
+      }
+    },
+    {
+      "iteration": 6,
+      "avg_loss": 1.3672440152914105,
+      "games_played": 25,
+      "timestamp": "20250111_124854",
+      "value_loss": 0.15297387540340424,
+      "policy_loss": 0.8908336748932838,
+      "evaluation_vs_random": {
+        "network_wins": 7,
+        "random_wins": 3,
+        "draws": 0
+      }
+    },
+    {
+      "iteration": 7,
+      "avg_loss": 1.4052108979518602,
+      "games_played": 25,
+      "timestamp": "20250111_124906",
+      "value_loss": 0.13335832953453064,
+      "policy_loss": 1.095959394518252,
+      "evaluation_vs_random": {
+        "network_wins": 6,
+        "random_wins": 4,
+        "draws": 0
+      }
+    },
+    {
+      "iteration": 8,
+      "avg_loss": 1.3447802831850517,
+      "games_played": 25,
+      "timestamp": "20250111_124919",
+      "value_loss": 0.06366929411888123,
+      "policy_loss": 0.8174816967893859,
+      "evaluation_vs_random": {
+        "network_wins": 9,
+        "random_wins": 1,
+        "draws": 0
+      }
+    },
+    {
+      "iteration": 9,
+      "avg_loss": 1.4187704506418848,
+      "games_played": 25,
+      "timestamp": "20250111_124931",
+      "value_loss": 0.021470315754413605,
+      "policy_loss": 0.8152863447974703,
+      "evaluation_vs_random": {
+        "network_wins": 8,
+        "random_wins": 2,
+        "draws": 0
+      }
+    },
+    {
+      "iteration": 10,
+      "avg_loss": 1.3068688820524642,
+      "games_played": 25,
+      "timestamp": "20250111_124944",
+      "value_loss": 0.09934544563293457,
+      "policy_loss": 0.7368028910244303,
+      "evaluation_vs_random": {
+        "network_wins": 6,
+        "random_wins": 4,
+        "draws": 0
+      }
+    }
+  ],
+  "final_loss": 1.3068688820524642,
+  "best_loss": 1.281261865213732,
+  "training_params": {
+    "num_iterations": 10,
+    "games_per_iteration": 25,
+    "num_simulations": 100,
+    "max_depth": 10,
+    "learning_rate": 0.008,
+    "batch_size": 64,
+    "epochs_per_iter": 10,
+    "max_grad_norm": 1.0,
+    "value_loss_weight": 0.75,
+    "policy_loss_weight": 1.0,
+    "initial_lr": 0.05,
+    "lr_decay_factor": 0.005,
+    "lr_decay_iterations": 10,
+    "patience": 10,
+    "min_delta": 0.05
+  },
+  "total_games": 250,
+  "training_duration": "0:02:06.332230",
+  "final_value_loss": 0.09934544563293457,
+  "final_policy_loss": 0.7368028910244303
 }
