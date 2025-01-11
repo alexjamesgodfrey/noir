@@ -10,7 +10,7 @@ import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 
-from game import GameState  # or from game_state import GameState
+from game import GameState
 from network import DistrictNoirNN
 from mcts import MCTS
 
@@ -27,55 +27,26 @@ def random_policy_action(game_state: GameState):
 def play_game_vs_random(
     network: DistrictNoirNN, num_simulations: int = 100, max_depth: int = 10
 ) -> int:
-    """
-    Plays one full game between:
-      - MCTS-based policy (using `network`)
-      - random policy (pure random valid moves).
-    Returns +1 if the network's side wins, -1 if the random side wins, 0 if tie.
-
-    By convention, let's say `network` is always 'player 1',
-    and 'player 2' is random. Adjust as needed if your game engine has
-    symmetrical or forced player indexing.
-    """
+    """Same as before; no major GPU usage here (random + MCTS are CPU-bound)."""
     game_state = GameState()
-    # Force the game state to track that "current_player == 1" is the network
-    # and "current_player == 2" is random. If your GameState logic differs,
-    # adapt accordingly.
-
-    # MCTS for the network
     mcts = MCTS(network, num_simulations=num_simulations, max_depth=max_depth)
 
     while not game_state.is_terminal():
         current_player = game_state.current_player
 
         if current_player == 1:
-            # network's turn
             mcts_probs = mcts.search(game_state)
-            # handle any NaNs:
             if np.any(np.isnan(mcts_probs)):
                 legal_actions = game_state.get_legal_actions()
                 mcts_probs = np.zeros_like(mcts_probs)
                 mcts_probs[legal_actions] = 1.0 / len(legal_actions)
-
-            # pick action greedily or with some small temperature
             action = np.argmax(mcts_probs)
-            # or do a temperature-based sampling, your choice
         else:
-            # random's turn
             action = random_policy_action(game_state)
 
         game_state.make_move(action)
 
-    # Evaluate outcome from the perspective of 'player 1' (network)
     result = game_state.get_result()
-    # Usually result is +1 if the last player to move won, -1 if lost, 0 if tie, etc.
-    # But if your game logic is different, adapt accordingly.
-
-    # If your GameState doesn't store who specifically won,
-    # you might do something like:
-    # winner = game_state.get_winner()  # returns 1 for net, 2 for random, etc.
-    # return +1 if winner == 1 else -1 if winner == 2 else 0
-
     return result
 
 
@@ -85,10 +56,7 @@ def play_game_vs_random(
 def self_play_single_game(
     network: DistrictNoirNN, num_simulations: int, max_depth: int
 ) -> List[Tuple[torch.Tensor, torch.Tensor, float]]:
-    """
-    Runs a single self-play game with the given network and MCTS parameters.
-    Returns a list of (state, policy, final_result_for_that_player).
-    """
+    """Same as before; MCTS self-play, returns (state, policy, value_for_that_player)."""
     game_state = GameState()
     mcts = MCTS(network, num_simulations=num_simulations, max_depth=max_depth)
 
@@ -120,7 +88,7 @@ def self_play_single_game(
             )
         )
 
-        # Temperature logic
+        # Temperature logic as before
         deck_size = len(game_state.deck)
         total_cards = 48
         if deck_size > 0.75 * total_cards:
@@ -152,7 +120,6 @@ def self_play_single_game(
     result = game_state.get_result()
     tqdm.write(f"Game completed in {last_move_count} moves with result: {result}\n")
 
-    # Convert each record to (state, policy, final_value_for_that_player)
     final_data = []
     for state_tensor, policy_tensor, player in training_data:
         value_for_player = result if player == game_state.current_player else -result
@@ -168,7 +135,9 @@ def self_play_worker(
     max_depth: int,
     device: str = "cpu",
 ) -> List[Tuple[torch.Tensor, torch.Tensor, float]]:
-    local_network = DistrictNoirNN().to(device)
+    local_network = DistrictNoirNN().to(
+        device
+    )  # <-- NOTE: Move local network to device
     local_network.load_state_dict(network_state_dict)
     local_network.eval()
 
@@ -230,6 +199,13 @@ def train_network(
     num_simulations: int = 100,
     max_depth: int = 10,
 ):
+
+    # -----------------
+    # CHOOSE DEVICE
+    # -----------------
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    network.to(device)  # <-- NOTE: put the main network on GPU
+
     training_start_time = datetime.datetime.now()
 
     params = {
@@ -264,29 +240,35 @@ def train_network(
         # ---------------------------
         # A) COLLECT TRAINING DATA
         # ---------------------------
+        # We'll run self-play on CPU by default. If you have multiple GPUs or want
+        # to attempt GPU self-play, you can pass device="cuda" to parallel_self_play,
+        # but that can get tricky with multiprocessing. Usually you just do CPU for MCTS
+        # and GPU for training.
         training_data = parallel_self_play(
             network,
             num_games=games_per_iteration,
             num_simulations=num_simulations,
             max_depth=max_depth,
-            device="cpu",
-            num_workers=None,  # or set to e.g. 4
+            device="cpu",  # MCTS self-play typically CPU
+            num_workers=None,
         )
 
         # -----------------------
-        # B) TRAIN THE NETWORK
+        # B) TRAIN THE NETWORK (on GPU)
         # -----------------------
         total_loss = 0
         num_batches = 0
         for epoch in range(params["epochs_per_iter"]):
             np.random.shuffle(training_data)
+
             for batch_idx in range(0, len(training_data), params["batch_size"]):
                 batch = training_data[batch_idx : batch_idx + params["batch_size"]]
                 states, mcts_probs, results = zip(*batch)
 
-                states = torch.stack(states)
-                mcts_probs = torch.stack(mcts_probs)
-                results = torch.tensor(results).float().unsqueeze(1)
+                # Convert to tensors
+                states = torch.stack(states).to(device)  # <-- NOTE: Move to GPU
+                mcts_probs = torch.stack(mcts_probs).to(device)
+                results = torch.tensor(results).float().unsqueeze(1).to(device)
 
                 optimizer.zero_grad()
                 value_pred, policy_pred = network(states)
@@ -320,10 +302,10 @@ def train_network(
         draws = 0
         num_eval_games = 10
         for _ in range(num_eval_games):
+            # For quick evaluation, we can do MCTS on CPU as well
             result = play_game_vs_random(
                 network, num_simulations=num_simulations, max_depth=max_depth
             )
-            # result: +1 => network wins, -1 => random wins, 0 => tie
             if result > 0:
                 network_wins += 1
             elif result < 0:
@@ -343,7 +325,6 @@ def train_network(
         # ---------------------
         # D) SAVE / LOG RESULTS
         # ---------------------
-        # Store training stats
         training_history.append(
             {
                 "iteration": iteration + 1,
@@ -356,7 +337,6 @@ def train_network(
             }
         )
 
-        # Save iteration checkpoint
         model_name = format_model_name(iteration + 1, avg_loss, params)
         iter_path = f"models/iterations/{model_name}.pth"
         torch.save(
@@ -371,7 +351,6 @@ def train_network(
             iter_path,
         )
 
-        # Best model
         if avg_loss < best_loss:
             best_loss = avg_loss
             best_path = f"models/best/{model_name}_best.pth"
@@ -388,14 +367,12 @@ def train_network(
             )
             print(f"New best model saved with loss: {avg_loss:.4f}")
 
-        # LR decay every 'lr_decay_iterations'
         if (iteration + 1) % params["lr_decay_iterations"] == 0:
             new_lr = optimizer.param_groups[0]["lr"] * params["lr_decay_factor"]
             for param_group in optimizer.param_groups:
                 param_group["lr"] = new_lr
             print(f"Learning rate decayed to: {new_lr:.6f}")
 
-        # Periodic checkpoint
         if (iteration + 1) % 10 == 0:
             checkpoint_path = f"models/checkpoints/{model_name}_checkpoint.pth"
             torch.save(
@@ -410,9 +387,6 @@ def train_network(
                 checkpoint_path,
             )
 
-    # -------------------------------------
-    # Final summary
-    # -------------------------------------
     training_summary = {
         "training_history": training_history,
         "final_loss": avg_loss,
@@ -440,15 +414,15 @@ def train_network(
 # 5) OPTIONAL: Example usage if run directly
 ###########################################
 if __name__ == "__main__":
-    # Initialize a fresh network
-    model = DistrictNoirNN()
+    # CHOOSE DEVICE HERE TOO IF YOU WANT:
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Train for 10 iterations, 25 self-play games each iteration,
-    # and do quick 100-simulation MCTS
+    model = DistrictNoirNN().to(device)  # main model on GPU
+
     train_network(
         model,
-        num_iterations=50,
+        num_iterations=10,  # For example
         games_per_iteration=25,
-        num_simulations=400,
-        max_depth=30,
+        num_simulations=100,
+        max_depth=10,
     )
