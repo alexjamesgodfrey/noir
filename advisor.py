@@ -51,7 +51,31 @@ def advisor_loop(model_path: str, num_simulations: int = 800):
     """Main advisor loop"""
     # Initialize AI
     network = DistrictNoirNN()
-    network.load_state_dict(torch.load(model_path, map_location=torch.device("cpu")))
+    checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
+
+    # If you saved the entire checkpoint, you'll have something like:
+    #   {
+    #       'model_state_dict': ...,
+    #       'optimizer_state_dict': ...,
+    #       'iteration': ...,
+    #       'params': ...,
+    #       'training_history': ...,
+    #       ...
+    #   }
+
+    # 1. Reconstruct your DistrictNoirNN either with or without extra params (if required):
+    network = DistrictNoirNN()  # or DistrictNoirNN(**checkpoint["params"]) if needed
+
+    # 2. Load the actual model weights from checkpoint['model_state_dict']:
+    # network.load_state_dict(checkpoint["model_state_dict"])
+    model_state_dict = checkpoint["model_state_dict"]
+    filtered_state_dict = {
+        k: v
+        for k, v in model_state_dict.items()
+        if k in network.state_dict() and network.state_dict()[k].shape == v.shape
+    }
+    network.load_state_dict(filtered_state_dict, strict=False)
+
     network.eval()
     mcts = MCTS(network, num_simulations=num_simulations)
 
@@ -298,7 +322,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model",
         type=str,
-        default="models/district_noir_latest.pth",
+        default="models/iterations/district_noir_iter004_sims400_games30_depth12_lr0.005000_loss0.9888.pth",
         help="Path to the model file",
     )
     parser.add_argument(

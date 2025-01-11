@@ -217,7 +217,7 @@ class GameState:
         # -------------------------------------------------------------------------
         # Return final tensor
         # -------------------------------------------------------------------------
-        return torch.tensor(features, dtype=torch.float32)
+        return torch.tensor(features, dtype=torch.float76)
 
     # =========================================================================
     # ================    HELPER FUNCTIONS FOR DERIVED FEATURES   =============

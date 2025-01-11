@@ -24,7 +24,7 @@ def display_game_state(game_state: GameState):
 
 
 def human_vs_ai():
-    network = DistrictNoirNN(input_size=197)
+    network = DistrictNoirNN(input_size=76)
     network.load_state_dict(torch.load("district_noir_latest.pth"))
     network.eval()
     mcts = MCTS(network)
@@ -71,13 +71,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.train:
-        network = DistrictNoirNN(input_size=197)
+        network = DistrictNoirNN(input_size=76)
         train_network(
             network,
-            num_iterations=25,
-            games_per_iteration=50,
-            num_simulations=800,
-            max_depth=35,
+            num_iterations=10,
+            games_per_iteration=25,
+            num_simulations=600,
+            max_depth=12,
         )
     elif args.play:
         human_vs_ai()

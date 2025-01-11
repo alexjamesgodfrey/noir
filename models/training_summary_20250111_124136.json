@@ -1,0 +1,67 @@
+{
+  "training_history": [
+    {
+      "iteration": 1,
+      "avg_loss": 1.967837808859975,
+      "games_played": 10,
+      "timestamp": "20250111_124128",
+      "value_loss": 0.16775262355804443,
+      "policy_loss": 1.3538563530695467
+    },
+    {
+      "iteration": 2,
+      "avg_loss": 1.6744813720978873,
+      "games_played": 10,
+      "timestamp": "20250111_124130",
+      "value_loss": 0.03571798652410507,
+      "policy_loss": 1.140585994118453
+    },
+    {
+      "iteration": 3,
+      "avg_loss": 1.5584106665298012,
+      "games_played": 10,
+      "timestamp": "20250111_124176",
+      "value_loss": 0.1836775839768766,
+      "policy_loss": 1.1597917663465771
+    },
+    {
+      "iteration": 4,
+      "avg_loss": 1.5159707885654936,
+      "games_played": 10,
+      "timestamp": "20250111_124134",
+      "value_loss": 0.2338762550058365,
+      "policy_loss": 1.0983510672186763
+    },
+    {
+      "iteration": 5,
+      "avg_loss": 1.44698317528279,
+      "games_played": 10,
+      "timestamp": "20250111_124136",
+      "value_loss": 0.026959659531712576,
+      "policy_loss": 1.1949128648401115
+    }
+  ],
+  "final_loss": 1.44698317528279,
+  "best_loss": 1.44698317528279,
+  "training_params": {
+    "num_iterations": 5,
+    "games_per_iteration": 10,
+    "num_simulations": 50,
+    "max_depth": 10,
+    "learning_rate": 0.008,
+    "batch_size": 64,
+    "epochs_per_iter": 10,
+    "max_grad_norm": 1.0,
+    "value_loss_weight": 0.75,
+    "policy_loss_weight": 1.0,
+    "initial_lr": 0.05,
+    "lr_decay_factor": 0.005,
+    "lr_decay_iterations": 10,
+    "patience": 10,
+    "min_delta": 0.05
+  },
+  "total_games": 50,
+  "training_duration": "0:00:11.015111",
+  "final_value_loss": 0.026959659531712576,
+  "final_policy_loss": 1.1949128648401115
+}
